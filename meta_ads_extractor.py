@@ -1,7 +1,7 @@
 """
 Meta Ads API — Script de Extração para TCC
 ==========================================
-Autor: [Seu Nome]
+Autor: [Acacio Guirra]
 Curso: Análise e Desenvolvimento de Sistemas
 Descrição: Extrai dados de campanhas, conjuntos e anúncios da Meta Ads API
            e carrega no BigQuery (ou exporta para CSV como fallback).
