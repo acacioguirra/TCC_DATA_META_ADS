@@ -1,14 +1,6 @@
 """
 Meta Ads API — Script de Extração para TCC
 ==========================================
-Autor: [Acacio Guirra]
-Curso: Análise e Desenvolvimento de Sistemas
-Descrição: Extrai dados de campanhas, conjuntos e anúncios da Meta Ads API
-           e carrega no BigQuery (ou exporta para CSV como fallback).
-
-Dependências:
-    pip install facebook-business google-cloud-bigquery pandas python-dotenv
-
 Uso:
     1. Configure o arquivo .env com suas credenciais
     2. Execute: python meta_ads_extractor.py
