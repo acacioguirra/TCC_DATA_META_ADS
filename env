@@ -1,6 +1,9 @@
+# ══════════════════════════════════════════════
+#  Meta Ads Dashboard — Variáveis de Ambiente
+#  ⚠ NUNCA commite este arquivo no Git!
+#  Adicione .env ao seu .gitignore imediatamente.
+# ══════════════════════════════════════════════
 # ─────────────────────────────────────────────
-# Meta Ads API — Credenciais
-# Renomeie este arquivo para .env e preencha
 # ─────────────────────────────────────────────
 
 # Do painel do seu App em developers.facebook.com
@@ -13,16 +16,6 @@ META_ACCESS_TOKEN=EAAVEwgLoapsBROZBulepVHIaKWHEZAvp2XbX7CWrW0nvmU5E5YLdb4cWZC0pe
 # Encontrado em business.facebook.com → Contas de anúncios
 # Formato obrigatório: act_XXXXXXXXX
 META_AD_ACCOUNT_ID=act=796822912673172
-
-# ─────────────────────────────────────────────
-# Google BigQuery (opcional)
-# ─────────────────────────────────────────────
-
-# ID do projeto no Google Cloud Console
-GCP_PROJECT_ID=SEU_PROJETO_GCP
-
-# Nome do dataset (será criado automaticamente)
-BQ_DATASET=meta_ads
 
 # ─────────────────────────────────────────────
 # Configuração de extração

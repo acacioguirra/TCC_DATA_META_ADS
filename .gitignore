@@ -1,0 +1,7 @@
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+
+# Config gerado a partir do .env
+config.js
