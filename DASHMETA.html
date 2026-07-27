@@ -241,7 +241,7 @@
     .fstep-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 6px; }
     .fstep-fill { height: 100%; border-radius: 2px; background: var(--blue); }
 
-    .metrics-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .metrics-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
 
     .metric-chip {
       background: var(--bg3);
@@ -530,6 +530,547 @@
                 <div class="fstep-bar"><div class="fstep-fill" style="width:52%"></div></div>
               </div>
               <div class="fstep">
+                <div class="fstep-top"><span class="fstep-name">Compras</span><span class="fstep-rate" id="fs-conv">–</span></div>
+                <div class="fstep-val" id="fs-purchases">–</div>
+                <div class="fstep-bar"><div class="fstep-fill" style="width:34%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="metrics-row" style="margin-top:auto;padding-top:14px;">
+            <div class="metric-chip">
+              <div class="chip-label">CPA</div>
+              <div class="chip-val" id="chip-cpa">–</div>
+            </div>
+            <div class="metric-chip">
+              <div class="chip-label">CPC</div>
+              <div class="chip-val" id="chip-cpc">–</div>
+            </div>
+            <div class="metric-chip">
+              <div class="chip-label">CPM</div>
+              <div class="chip-val" id="chip-cpm">–</div>
+            </div>
+            <div class="metric-chip">
+              <div class="chip-label">ROAS</div>
+              <div class="chip-val" id="chip-roas">–</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card line-card">
+          <div class="card-head">
+            <span class="card-title">Receita vs Compras — evolução diária</span>
+          </div>
+          <div class="line-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#1877F2"></div>Receita (R$)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#22c55e; border-radius:0;width:12px;height:2px;margin:3px 0;"></div>Compras
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="lineChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Distribuição ROAS</span></div>
+          <div class="donut-wrap">
+            <canvas id="donutChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-center-val">–</div>
+              <div class="donut-center-label">ROAS</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-head-bar">
+          <div class="card-title" style="color:var(--text2)">Campanhas — últimos 7 dias (por dia)</div>
+          <input class="table-search" type="date" id="table-date-filter" onchange="filterTable(this.value)" style="color-scheme:dark;cursor:pointer;">
+          <button class="btn-action" onclick="document.getElementById('table-date-filter').value='';filterTable('')" style="font-size:11px;padding:5px 10px;">✕ Limpar</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Data</th>
+              <th>Investimento</th>
+              <th>Impressões</th>
+              <th>Cliques</th>
+              <th>CTR</th>
+              <th>Compras</th>
+              <th>Receita</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="campaign-tbody"><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="visao-detalhe" style="display:none; animation: fadeUp .3s ease both;">
+      <div style="margin-bottom:20px;">
+        <button class="btn-action" onclick="voltarVisaoGeral()">← Voltar para Visão Geral</button>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title" id="detalhe-titulo" style="font-size:16px;">Detalhes</span>
+        </div>
+        <div class="chart-wrap" style="height:400px;width:100%;">
+          <canvas id="detalheChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ Rodapé: ID da conta ofuscado para preservar privacidade -->
+    <div class="footer">
+      Meta Ads Dashboard — Dados reais via Meta Marketing API v19.0 &nbsp;·&nbsp;
+      Ad Account: act_***********172 &nbsp;·&nbsp;
+    </div>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════
+    //  CREDENCIAIS — lidas do config.js (não versionado)
+    //  Nunca hardcode tokens aqui. Use o arquivo .env
+    //  para gerar config.js localmente.
+    // ══════════════════════════════════════════════
+    const ACCESS_TOKEN  = window.__META_CONFIG__?.ACCESS_TOKEN  || '';
+    const AD_ACCOUNT_ID = window.__META_CONFIG__?.AD_ACCOUNT_ID || '';
+
+    // ══════════════════════════════════════════════
+    //  ESTADO GLOBAL
+    // ══════════════════════════════════════════════
+    let lineChartInst   = null;
+    let donutInst       = null;
+    let detalheChartInst = null;
+    let globalDailyData = [];
+    let globalSummary   = {};
+    let loadSuccess     = false; // ✅ controla o finally
+
+    // ══════════════════════════════════════════════
+    //  HELPERS
+    // ══════════════════════════════════════════════
+    function fmt(n, prefix = '') {
+      return prefix + parseFloat(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtInt(n) {
+      return parseInt(n || 0).toLocaleString('pt-BR');
+    }
+
+    function showInfo(msg, type = 'success') {
+      document.getElementById('info-box-container').innerHTML =
+        `<div class="info-box ${type}">${msg}</div>`;
+    }
+
+    function setBadge(text, live) {
+      const b = document.getElementById('status-badge');
+      b.textContent = (live ? '● ' : '○ ') + text;
+      b.className = live ? 'badge-live' : 'badge-mock';
+    }
+
+    // ══════════════════════════════════════════════
+    //  ✅ ERRO BLOQUEANTE — trava a tela, sem fallback
+    // ══════════════════════════════════════════════
+    function showBlockingError(msg) {
+      const overlay = document.getElementById('loading');
+      const text    = document.getElementById('loading-text');
+      overlay.classList.add('is-error');
+      text.innerHTML = msg;
+      overlay.style.display = 'flex';
+      // Não fecha — interface permanece bloqueada até o usuário recarregar
+    }
+
+    // ══════════════════════════════════════════════
+    //  INIT DATES
+    // ══════════════════════════════════════════════
+    function initDates() {
+      const end   = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 6);
+      const fmtDate = d => d.toISOString().slice(0, 10);
+      document.getElementById('date-start').value = fmtDate(start);
+      document.getElementById('date-end').value   = fmtDate(end);
+    }
+
+    // ══════════════════════════════════════════════
+    //  LOAD DATA DA META API
+    // ══════════════════════════════════════════════
+    async function loadData() {
+      const dateStart = document.getElementById('date-start').value;
+      const dateEnd   = document.getElementById('date-end').value;
+
+      // ── Validação do período ──
+      if (dateStart && dateEnd) {
+        const dStart = new Date(dateStart);
+        const dEnd   = new Date(dateEnd);
+        const hoje   = new Date();
+        hoje.setHours(23, 59, 59, 0);
+
+        if (dStart > dEnd) {
+          showInfo('⚠ <strong>Período inválido:</strong> a data inicial não pode ser maior que a data final.', 'error');
+          return;
+        }
+        if (dEnd > hoje) {
+          showInfo('⚠ <strong>Período inválido:</strong> a data final não pode ser uma data futura.', 'error');
+          return;
+        }
+        const diffDias = Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24));
+        if (diffDias > 365) {
+          showInfo('⚠ <strong>Período muito longo:</strong> selecione um intervalo de no máximo 365 dias.', 'error');
+          return;
+        }
+      }
+
+      // Reset do overlay para estado de carregamento normal
+      const overlay = document.getElementById('loading');
+      overlay.classList.remove('is-error');
+      document.getElementById('loading-text').textContent = 'Buscando dados da Meta API…';
+      overlay.style.display = 'flex';
+      document.getElementById('info-box-container').innerHTML = '';
+      loadSuccess = false; // ✅ reseta o flag
+
+      const timeRange = dateStart && dateEnd
+        ? `&time_range={"since":"${dateStart}","until":"${dateEnd}"}`
+        : `&date_preset=last_7d`;
+
+      try {
+        // 1) Dados resumo (agregado)
+        const summaryUrl =
+          `https://graph.facebook.com/v19.0/act_${AD_ACCOUNT_ID}/insights` +
+          `?fields=spend,impressions,clicks,ctr,cpc,cpm,purchase_roas,actions,action_values` +
+          timeRange +
+          `&access_token=${ACCESS_TOKEN}`;
+
+        // 2) Dados diários
+        const dailyUrl =
+          `https://graph.facebook.com/v19.0/act_${AD_ACCOUNT_ID}/insights` +
+          `?fields=spend,impressions,clicks,actions,action_values,purchase_roas` +
+          timeRange +
+          `&time_increment=1` +
+          `&access_token=${ACCESS_TOKEN}`;
+
+        const [summaryRes, dailyRes] = await Promise.all([
+          fetch(summaryUrl),
+          fetch(dailyUrl)
+        ]);
+
+        const summaryJson = await summaryRes.json();
+        const dailyJson   = await dailyRes.json();
+
+        if (summaryJson.error) {
+          throw new Error(summaryJson.error.message);
+        }
+
+        const s           = summaryJson.data?.[0] || {};
+        globalSummary     = s;
+        globalDailyData   = dailyJson.data || [];
+
+        const purchases   = parseInt(s.actions?.find(a => a.action_type === 'purchase')?.value || 0);
+        const revenue     = parseFloat(s.action_values?.find(a => a.action_type === 'purchase')?.value || 0);
+        const roas        = parseFloat(s.purchase_roas?.[0]?.value || 0);
+        const spend       = parseFloat(s.spend || 0);
+        const clicks      = parseInt(s.clicks || 0);
+        const impressions = parseInt(s.impressions || 0);
+        const cpc         = parseFloat(s.cpc || 0);
+        const cpm         = parseFloat(s.cpm || 0);
+        const ctr         = parseFloat(s.ctr || 0);
+
+        // KPIs
+        renderKPIs({ spend, purchases, revenue, roas, clicks });
+
+        // Funil
+        document.getElementById('funnel-clicks').textContent      = fmtInt(clicks);
+        document.getElementById('funnel-impressions').textContent  = fmtInt(impressions);
+        document.getElementById('funnel-spend').textContent        = 'R$' + fmt(spend);
+        document.getElementById('funnel-purchases').textContent    = purchases;
+        document.getElementById('fs-clicks').textContent          = fmtInt(clicks);
+        document.getElementById('fs-ctr').textContent             = ctr.toFixed(2) + '%';
+        document.getElementById('fs-impressions').textContent     = fmtInt(impressions);
+        document.getElementById('fs-imp-label').textContent       = '';
+        document.getElementById('fs-spend').textContent           = 'R$' + fmt(spend);
+        document.getElementById('fs-purchases').textContent       = purchases;
+        document.getElementById('fs-conv').textContent            = clicks > 0 ? ((purchases / clicks) * 100).toFixed(2) + '%' : '–';
+        document.getElementById('chip-cpa').textContent           = purchases > 0 ? 'R$' + fmt(spend / purchases) : '–';
+        document.getElementById('chip-cpc').textContent           = 'R$' + fmt(cpc);
+        document.getElementById('chip-cpm').textContent           = 'R$' + fmt(cpm);
+        document.getElementById('chip-roas').textContent          = roas.toFixed(2);
+
+        // Charts
+        renderLineChart(globalDailyData);
+        renderDonut(roas, spend, revenue);
+        renderTable(globalDailyData);
+
+        setBadge('dados reais', true);
+        showInfo(`✓ Dados carregados com sucesso — ${globalDailyData.length} dias encontrados. Última atualização: ${new Date().toLocaleTimeString('pt-BR')}`, 'success');
+
+        loadSuccess = true; // ✅ marca sucesso antes do finally fechar o overlay
+
+      } catch (err) {
+        console.error(err);
+        setBadge('erro na API', false);
+
+        // ✅ Erro bloqueante — trava a tela, sem dados fictícios
+        showBlockingError(
+          `⚠ Falha ao conectar com a Meta API<br><br>` +
+          `<span style="font-size:11px;color:var(--text2)">${err.message}</span><br><br>` +
+          `<span style="font-size:11px;color:var(--text3)">Verifique se o Access Token é válido (expira em ~60 dias) e se a conta possui dados no período selecionado. Recarregue a página após corrigir o problema.</span>`
+        );
+
+      } finally {
+        // ✅ Só fecha o overlay se a carga foi bem-sucedida
+        if (loadSuccess) {
+          document.getElementById('loading').style.display = 'none';
+        }
+        // Em caso de erro, o overlay permanece visível como tela bloqueante
+      }
+    }
+
+    // ══════════════════════════════════════════════
+    //  RENDER KPIs
+    // ══════════════════════════════════════════════
+    function renderKPIs({ spend, purchases, revenue, roas, clicks }) {
+      const lucro       = revenue - spend;
+      const ticketMedio = purchases > 0 ? revenue / purchases : 0;
+      const cpa         = purchases > 0 ? spend / purchases : 0;
+      const roasColor   = roas >= 3 ? 'var(--green)' : roas >= 2 ? 'var(--amber)' : 'var(--red)';
+      const roasTip     = roas >= 3 ? '▲ Excelente' : roas >= 2 ? '● Aceitável' : '▼ Abaixo do ideal';
+      const lucroColor  = lucro >= 0 ? 'var(--green)' : 'var(--red)';
+
+      const kpis = [
+        { label: 'Investimento', value: `R$ ${fmt(spend)}`,   sub: `CPA: R$ ${fmt(cpa)}`,                  subColor: 'var(--text2)' },
+        { label: 'Compras',      value: String(purchases),     sub: `Ticket médio: R$ ${fmt(ticketMedio)}`, subColor: 'var(--text2)' },
+        { label: 'Faturamento',  value: `R$ ${fmt(revenue)}`,  sub: `Lucro bruto: R$ ${fmt(lucro)}`,        subColor: lucroColor     },
+        { label: 'ROAS',         value: roas.toFixed(2),       sub: roasTip,                                subColor: roasColor      },
+        { label: 'Cliques',      value: fmtInt(clicks),        sub: `CTR médio (via funil)`,                subColor: 'var(--text2)' },
+      ];
+
+      const grid = document.getElementById('kpi-grid');
+      grid.innerHTML = kpis.map((k, i) => `
+        <div class="kpi" onclick="abrirDetalhe(${i})">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-val">${k.value}</div>
+          <div class="kpi-delta" style="color:${k.subColor}">${k.sub}</div>
+          <div class="spark-wrap"><canvas id="spark${i}"></canvas></div>
+        </div>`).join('');
+
+      setTimeout(() => renderSparks(kpis), 60);
+    }
+
+    function renderSparks(kpis) {
+      if (!globalDailyData.length) return;
+      const fields = ['spend', 'purchases', 'revenue', 'roas', 'clicks'];
+
+      fields.forEach((field, i) => {
+        const c = document.getElementById('spark' + i);
+        if (!c) return;
+        c.width  = c.offsetWidth || 140;
+        c.height = 32;
+
+        const sparkData = globalDailyData.map(d => {
+          if (field === 'purchases') return parseInt(d.actions?.find(a => a.action_type === 'purchase')?.value || 0);
+          if (field === 'revenue')   return parseFloat(d.action_values?.find(a => a.action_type === 'purchase')?.value || 0);
+          if (field === 'roas')      return parseFloat(d.purchase_roas?.[0]?.value || 0);
+          if (field === 'clicks')    return parseInt(d.clicks || 0);
+          return parseFloat(d[field] || 0);
+        });
+
+        new Chart(c, {
+          type: 'line',
+          data: {
+            labels: sparkData.map((_, j) => j),
+            datasets: [{ data: sparkData, borderColor: '#1877F2', borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: false }]
+          },
+          options: {
+            responsive: false, animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false } }
+          }
+        });
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  LINE CHART (diário)
+    // ══════════════════════════════════════════════
+    function renderLineChart(daily) {
+      const ctx = document.getElementById('lineChart');
+      if (!ctx) return;
+      if (lineChartInst) lineChartInst.destroy();
+
+      const labels  = daily.map(d => d.date_start?.slice(5) || '');
+      const receita = daily.map(d => parseFloat(d.action_values?.find(a => a.action_type === 'purchase')?.value || 0));
+      const compras = daily.map(d => parseInt(d.actions?.find(a => a.action_type === 'purchase')?.value || 0));
+
+      lineChartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Receita (R$)', data: receita, borderColor: '#1877F2', backgroundColor: 'rgba(24,119,242,0.07)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#1877F2', tension: 0.4, fill: true,  yAxisID: 'y'  },
+            { label: 'Compras',      data: compras, borderColor: '#22c55e', borderDash: [5,3], borderWidth: 1.5,       pointRadius: 3, pointBackgroundColor: '#22c55e',  tension: 0.4, fill: false, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(17,19,24,0.95)', titleColor: '#f0f2f5', bodyColor: '#8b919e', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1 }
+          },
+          scales: {
+            x:  { ticks: { color: '#555b66', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y:  { ticks: { color: '#555b66', font: { size: 10 }, callback: v => 'R$' + v.toLocaleString('pt-BR') }, grid: { color: 'rgba(255,255,255,0.04)' }, position: 'left'  },
+            y1: { ticks: { color: '#22c55e', font: { size: 10 } }, grid: { display: false }, position: 'right' }
+          }
+        }
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  DONUT
+    // ══════════════════════════════════════════════
+    function renderDonut(roas, spend, revenue) {
+      const ctx = document.getElementById('donutChart');
+      if (!ctx) return;
+      if (donutInst) donutInst.destroy();
+
+      const custo  = spend;
+      const lucro  = revenue - spend;
+      const colors = ['#1877F2', '#22c55e'];
+      const labels = ['Custo (R$)', 'Lucro Bruto (R$)'];
+      const data   = [Math.max(custo, 0), Math.max(lucro, 0)];
+
+      document.getElementById('donut-center-val').textContent = roas.toFixed(2);
+
+      donutInst = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(17,19,24,0.95)', titleColor: '#f0f2f5', bodyColor: '#8b919e', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, callbacks: { label: ctx => ` R$ ${ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` } }
+          }
+        }
+      });
+
+      document.getElementById('donut-legend').innerHTML = labels.map((l, i) => `
+        <div class="dl-item">
+          <div class="dl-left"><div class="dl-dot" style="background:${colors[i]}"></div>${l}</div>
+          <div class="dl-pct">R$ ${data[i].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        </div>`).join('');
+    }
+
+    // ══════════════════════════════════════════════
+    //  TABLE (diária)
+    // ══════════════════════════════════════════════
+    function renderTable(daily) {
+      const tbody = document.getElementById('campaign-tbody');
+      if (!daily.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">Nenhum dado encontrado para o período.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = daily.map((d, i) => {
+        const spend       = parseFloat(d.spend || 0);
+        const impressions = parseInt(d.impressions || 0);
+        const clicks      = parseInt(d.clicks || 0);
+        const ctr         = parseFloat(d.ctr || 0);
+        const purchases   = parseInt(d.actions?.find(a => a.action_type === 'purchase')?.value || 0);
+        const revenue     = parseFloat(d.action_values?.find(a => a.action_type === 'purchase')?.value || 0);
+        const roas        = parseFloat(d.purchase_roas?.[0]?.value || 0);
+        const roasOk      = roas >= 2;
+
+        return `
+        <tr>
+          <td class="td-mono" style="color:var(--text3)">${String(i + 1).padStart(2, '0')}</td>
+          <td class="td-name">${d.date_start || '–'}</td>
+          <td class="td-mono">R$ ${fmt(spend)}</td>
+          <td class="td-mono">${fmtInt(impressions)}</td>
+          <td class="td-mono">${fmtInt(clicks)}</td>
+          <td class="td-mono">${ctr.toFixed(2)}%</td>
+          <td class="td-mono">${purchases}</td>
+          <td class="td-mono">R$ ${fmt(revenue)}</td>
+          <td class="td-mono" style="color:${roasOk ? '#22c55e' : '#ef4444'}">${roas.toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function filterTable(q) {
+      const rows = document.querySelectorAll('#campaign-tbody tr');
+      rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+    }
+
+    // ══════════════════════════════════════════════
+    //  DETALHE (SPA)
+    // ══════════════════════════════════════════════
+    function abrirDetalhe(index) {
+      if (!globalDailyData.length) return;
+      document.getElementById('visao-principal').style.display = 'none';
+      document.getElementById('visao-detalhe').style.display   = 'block';
+
+      const labels = ['Investimento', 'Compras', 'Receita', 'ROAS', 'Cliques'];
+      const fields = ['spend', 'purchases', 'revenue', 'roas', 'clicks'];
+      const label  = labels[index];
+      const field  = fields[index];
+
+      document.getElementById('detalhe-titulo').innerText = `Evolução de ${label} — por dia`;
+
+      const sparkData = globalDailyData.map(d => {
+        if (field === 'purchases') return parseInt(d.actions?.find(a => a.action_type === 'purchase')?.value || 0);
+        if (field === 'revenue')   return parseFloat(d.action_values?.find(a => a.action_type === 'purchase')?.value || 0);
+        if (field === 'roas')      return parseFloat(d.purchase_roas?.[0]?.value || 0);
+        if (field === 'clicks')    return parseInt(d.clicks || 0);
+        return parseFloat(d[field] || 0);
+      });
+
+      const dateLabels = globalDailyData.map(d => d.date_start?.slice(5) || '');
+      const ctx = document.getElementById('detalheChart');
+      if (detalheChartInst) detalheChartInst.destroy();
+
+      detalheChartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dateLabels,
+          datasets: [{
+            label, data: sparkData,
+            borderColor: '#1877F2', backgroundColor: 'rgba(24,119,242,0.08)',
+            borderWidth: 2, pointRadius: 5, pointBackgroundColor: '#1877F2',
+            fill: true, tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(17,19,24,0.95)', titleColor: '#f0f2f5', bodyColor: '#8b919e', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1 }
+          },
+          scales: {
+            x: { ticks: { color: '#8b919e' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#8b919e' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+    }
+
+    function voltarVisaoGeral() {
+      document.getElementById('visao-detalhe').style.display   = 'none';
+      document.getElementById('visao-principal').style.display = 'block';
+    }
+
+    // ══════════════════════════════════════════════
+    //  INIT
+    // ══════════════════════════════════════════════
+    initDates();
+    loadData();
+  </script>
+</body>
+</html>         <div class="fstep">
                 <div class="fstep-top"><span class="fstep-name">Compras</span><span class="fstep-rate" id="fs-conv">–</span></div>
                 <div class="fstep-val" id="fs-purchases">–</div>
                 <div class="fstep-bar"><div class="fstep-fill" style="width:34%"></div></div>
