@@ -10,7 +10,6 @@
     rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
-  <!-- ✅ Credenciais carregadas do config.js (não versionado) -->
   <script src="config.js"></script>
 
   <style>
@@ -349,7 +348,7 @@
     .dot-active { background: var(--green); box-shadow: 0 0 4px var(--green); }
     .dot-paused { background: var(--amber); }
 
-    /* Loading / Error overlay — compartilhado */
+
     .loading-overlay {
       position: fixed;
       inset: 0;
@@ -362,7 +361,7 @@
       gap: 12px;
     }
 
-    /* ✅ Estado de erro bloqueante — substitui o fallback de dados fictícios */
+    
     .loading-overlay.is-error {
       background: rgba(10,12,16,0.97);
       cursor: not-allowed;
@@ -403,7 +402,7 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Error/info box inline */
+   
     .info-box {
       border-radius: 12px;
       padding: 14px 18px;
