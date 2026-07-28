@@ -240,17 +240,18 @@
     .fstep-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 6px; }
     .fstep-fill { height: 100%; border-radius: 2px; background: var(--blue); }
 
-    .metrics-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 14px; }
 
     .metric-chip {
       background: var(--bg3);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px 10px;
+      padding: 8px 6px;
+      min-width: 0;
     }
 
-    .chip-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
-    .chip-val { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+    .chip-label { font-size: 8.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; white-space: nowrap; }
+    .chip-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .line-card { display: flex; flex-direction: column; }
 
@@ -348,7 +349,7 @@
     .dot-active { background: var(--green); box-shadow: 0 0 4px var(--green); }
     .dot-paused { background: var(--amber); }
 
-
+  
     .loading-overlay {
       position: fixed;
       inset: 0;
@@ -361,7 +362,7 @@
       gap: 12px;
     }
 
-    
+ 
     .loading-overlay.is-error {
       background: rgba(10,12,16,0.97);
       cursor: not-allowed;
@@ -402,7 +403,7 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-   
+    /* Error/info box inline */
     .info-box {
       border-radius: 12px;
       padding: 14px 18px;
@@ -500,11 +501,11 @@
           <div class="funnel-container">
             <svg class="funnel-visual" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
               <polygon points="10,0 270,0 230,48 50,48" fill="#1877F2" opacity="1"/>
-              <text x="140" y="18" text-anchor="middle" fill="white" font-size="13" font-family="DM Sans" font-weight="600">Cliques</text>
-              <text x="140" y="36" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12" font-family="DM Mono" id="funnel-clicks">–</text>
+              <text x="140" y="18" text-anchor="middle" fill="white" font-size="13" font-family="DM Sans" font-weight="600">Impressões</text>
+              <text x="140" y="36" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12" font-family="DM Mono" id="funnel-impressions">–</text>
               <polygon points="50,52 230,52 196,98 84,98" fill="#1877F2" opacity="0.75"/>
-              <text x="140" y="70" text-anchor="middle" fill="white" font-size="13" font-family="DM Sans" font-weight="600">Impressões</text>
-              <text x="140" y="88" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12" font-family="DM Mono" id="funnel-impressions">–</text>
+              <text x="140" y="70" text-anchor="middle" fill="white" font-size="13" font-family="DM Sans" font-weight="600">Cliques</text>
+              <text x="140" y="88" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12" font-family="DM Mono" id="funnel-clicks">–</text>
               <polygon points="84,102 196,102 168,145 112,145" fill="#1877F2" opacity="0.52"/>
               <text x="140" y="120" text-anchor="middle" fill="white" font-size="13" font-family="DM Sans" font-weight="600">Investimento</text>
               <text x="140" y="138" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12" font-family="DM Mono" id="funnel-spend">–</text>
@@ -514,13 +515,13 @@
             </svg>
             <div class="funnel-steps">
               <div class="fstep">
-                <div class="fstep-top"><span class="fstep-name">Cliques</span><span class="fstep-rate" id="fs-ctr">–</span></div>
-                <div class="fstep-val" id="fs-clicks">–</div>
+                <div class="fstep-top"><span class="fstep-name">Impressões</span><span class="fstep-rate" id="fs-imp-label">–</span></div>
+                <div class="fstep-val" id="fs-impressions">–</div>
                 <div class="fstep-bar"><div class="fstep-fill" style="width:100%"></div></div>
               </div>
               <div class="fstep">
-                <div class="fstep-top"><span class="fstep-name">Impressões</span><span class="fstep-rate" id="fs-imp-label">–</span></div>
-                <div class="fstep-val" id="fs-impressions">–</div>
+                <div class="fstep-top"><span class="fstep-name">Cliques</span><span class="fstep-rate" id="fs-ctr">–</span></div>
+                <div class="fstep-val" id="fs-clicks">–</div>
                 <div class="fstep-bar"><div class="fstep-fill" style="width:75%"></div></div>
               </div>
               <div class="fstep">
@@ -536,6 +537,10 @@
             </div>
           </div>
           <div class="metrics-row" style="margin-top:auto;padding-top:14px;">
+            <div class="metric-chip">
+              <div class="chip-label">CPA</div>
+              <div class="chip-val" id="chip-cpa">–</div>
+            </div>
             <div class="metric-chip">
               <div class="chip-label">CPC</div>
               <div class="chip-val" id="chip-cpc">–</div>
@@ -620,7 +625,7 @@
       </div>
     </div>
 
-    <!-- ✅ Rodapé: ID da conta ofuscado para preservar privacidade -->
+  
     <div class="footer">
       Meta Ads Dashboard — Dados reais via Meta Marketing API v19.0 &nbsp;·&nbsp;
       Ad Account: act_***********172 &nbsp;·&nbsp;
@@ -628,27 +633,18 @@
   </div>
 
   <script>
-    // ══════════════════════════════════════════════
-    //  CREDENCIAIS — lidas do config.js (não versionado)
-    //  Nunca hardcode tokens aqui. Use o arquivo .env
-    //  para gerar config.js localmente.
-    // ══════════════════════════════════════════════
+
     const ACCESS_TOKEN  = window.__META_CONFIG__?.ACCESS_TOKEN  || '';
     const AD_ACCOUNT_ID = window.__META_CONFIG__?.AD_ACCOUNT_ID || '';
 
-    // ══════════════════════════════════════════════
-    //  ESTADO GLOBAL
-    // ══════════════════════════════════════════════
+
     let lineChartInst   = null;
     let donutInst       = null;
     let detalheChartInst = null;
     let globalDailyData = [];
     let globalSummary   = {};
-    let loadSuccess     = false; // ✅ controla o finally
+    let loadSuccess     = false; 
 
-    // ══════════════════════════════════════════════
-    //  HELPERS
-    // ══════════════════════════════════════════════
     function fmt(n, prefix = '') {
       return prefix + parseFloat(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
@@ -668,21 +664,17 @@
       b.className = live ? 'badge-live' : 'badge-mock';
     }
 
-    // ══════════════════════════════════════════════
-    //  ✅ ERRO BLOQUEANTE — trava a tela, sem fallback
-    // ══════════════════════════════════════════════
+
     function showBlockingError(msg) {
       const overlay = document.getElementById('loading');
       const text    = document.getElementById('loading-text');
       overlay.classList.add('is-error');
       text.innerHTML = msg;
       overlay.style.display = 'flex';
-      // Não fecha — interface permanece bloqueada até o usuário recarregar
+  
     }
 
-    // ══════════════════════════════════════════════
-    //  INIT DATES
-    // ══════════════════════════════════════════════
+
     function initDates() {
       const end   = new Date();
       const start = new Date();
@@ -692,14 +684,12 @@
       document.getElementById('date-end').value   = fmtDate(end);
     }
 
-    // ══════════════════════════════════════════════
-    //  LOAD DATA DA META API
-    // ══════════════════════════════════════════════
+
     async function loadData() {
       const dateStart = document.getElementById('date-start').value;
       const dateEnd   = document.getElementById('date-end').value;
 
-      // ── Validação do período ──
+
       if (dateStart && dateEnd) {
         const dStart = new Date(dateStart);
         const dEnd   = new Date(dateEnd);
@@ -721,27 +711,27 @@
         }
       }
 
-      // Reset do overlay para estado de carregamento normal
+      
       const overlay = document.getElementById('loading');
       overlay.classList.remove('is-error');
       document.getElementById('loading-text').textContent = 'Buscando dados da Meta API…';
       overlay.style.display = 'flex';
       document.getElementById('info-box-container').innerHTML = '';
-      loadSuccess = false; // ✅ reseta o flag
+      loadSuccess = false;
 
       const timeRange = dateStart && dateEnd
         ? `&time_range={"since":"${dateStart}","until":"${dateEnd}"}`
         : `&date_preset=last_7d`;
 
       try {
-        // 1) Dados resumo (agregado)
+        
         const summaryUrl =
           `https://graph.facebook.com/v19.0/act_${AD_ACCOUNT_ID}/insights` +
           `?fields=spend,impressions,clicks,ctr,cpc,cpm,purchase_roas,actions,action_values` +
           timeRange +
           `&access_token=${ACCESS_TOKEN}`;
 
-        // 2) Dados diários
+
         const dailyUrl =
           `https://graph.facebook.com/v19.0/act_${AD_ACCOUNT_ID}/insights` +
           `?fields=spend,impressions,clicks,actions,action_values,purchase_roas` +
@@ -790,6 +780,7 @@
         document.getElementById('fs-spend').textContent           = 'R$' + fmt(spend);
         document.getElementById('fs-purchases').textContent       = purchases;
         document.getElementById('fs-conv').textContent            = clicks > 0 ? ((purchases / clicks) * 100).toFixed(2) + '%' : '–';
+        document.getElementById('chip-cpa').textContent           = purchases > 0 ? 'R$' + fmt(spend / purchases) : '–';
         document.getElementById('chip-cpc').textContent           = 'R$' + fmt(cpc);
         document.getElementById('chip-cpm').textContent           = 'R$' + fmt(cpm);
         document.getElementById('chip-roas').textContent          = roas.toFixed(2);
@@ -802,13 +793,13 @@
         setBadge('dados reais', true);
         showInfo(`✓ Dados carregados com sucesso — ${globalDailyData.length} dias encontrados. Última atualização: ${new Date().toLocaleTimeString('pt-BR')}`, 'success');
 
-        loadSuccess = true; // ✅ marca sucesso antes do finally fechar o overlay
+        loadSuccess = true;
 
       } catch (err) {
         console.error(err);
         setBadge('erro na API', false);
 
-        // ✅ Erro bloqueante — trava a tela, sem dados fictícios
+      
         showBlockingError(
           `⚠ Falha ao conectar com a Meta API<br><br>` +
           `<span style="font-size:11px;color:var(--text2)">${err.message}</span><br><br>` +
@@ -816,17 +807,14 @@
         );
 
       } finally {
-        // ✅ Só fecha o overlay se a carga foi bem-sucedida
+        // 
         if (loadSuccess) {
           document.getElementById('loading').style.display = 'none';
         }
-        // Em caso de erro, o overlay permanece visível como tela bloqueante
+        // 
       }
     }
 
-    // ══════════════════════════════════════════════
-    //  RENDER KPIs
-    // ══════════════════════════════════════════════
     function renderKPIs({ spend, purchases, revenue, roas, clicks }) {
       const lucro       = revenue - spend;
       const ticketMedio = purchases > 0 ? revenue / purchases : 0;
