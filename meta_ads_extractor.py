@@ -17,7 +17,7 @@ from typing import Optional
 import pandas as pd
 from dotenv import load_dotenv
 
-# ─── Facebook Business SDK ────────────────────────────────────────────────────
+
 from facebook_business.api import FacebookAdsApi
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.campaign import Campaign
@@ -25,7 +25,7 @@ from facebook_business.adobjects.adset import AdSet
 from facebook_business.adobjects.ad import Ad
 from facebook_business.exceptions import FacebookRequestError
 
-# ─── Google BigQuery (opcional — comente se usar só CSV) ──────────────────────
+
 try:
     from google.cloud import bigquery
     from google.api_core.exceptions import NotFound
@@ -35,9 +35,7 @@ except ImportError:
     print("[AVISO] google-cloud-bigquery não instalado. Usando fallback CSV.")
 
 
-# ==============================================================================
-# CONFIGURAÇÃO DE LOGGING
-# ==============================================================================
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,22 +48,18 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# ==============================================================================
-# CARREGAMENTO DE CREDENCIAIS (.env)
-# ==============================================================================
-
 load_dotenv()
 
 APP_ID           = os.getenv("META_APP_ID")
 APP_SECRET       = os.getenv("META_APP_SECRET")
 ACCESS_TOKEN     = os.getenv("META_ACCESS_TOKEN")
-AD_ACCOUNT_ID    = os.getenv("META_AD_ACCOUNT_ID")   # Formato: act_XXXXXXXXX
+AD_ACCOUNT_ID    = os.getenv("META_AD_ACCOUNT_ID")  
 
-# BigQuery (só necessário se usar BigQuery como destino)
+
 GCP_PROJECT_ID   = os.getenv("GCP_PROJECT_ID")
 BQ_DATASET       = os.getenv("BQ_DATASET", "meta_ads")
 
-# Período de extração (padrão: últimos 90 dias)
+
 DAYS_LOOKBACK    = int(os.getenv("DAYS_LOOKBACK", "90"))
 
 
@@ -84,9 +78,7 @@ def _validate_env() -> None:
         sys.exit(1)
 
 
-# ==============================================================================
-# INICIALIZAÇÃO DA API
-# ==============================================================================
+
 
 def init_api() -> AdAccount:
     """Inicializa a conexão com a Meta Ads API e retorna o objeto AdAccount."""
@@ -100,11 +92,9 @@ def init_api() -> AdAccount:
     return account
 
 
-# ==============================================================================
-# DEFINIÇÃO DOS CAMPOS E MÉTRICAS
-# ==============================================================================
 
-# Campos de insights agregados por dia (nível campanha/conjunto/anúncio)
+
+
 INSIGHT_FIELDS = [
     "date_start",
     "date_stop",
@@ -114,36 +104,33 @@ INSIGHT_FIELDS = [
     "adset_name",
     "ad_id",
     "ad_name",
-    "spend",               # Investimento (R$)
-    "impressions",         # Impressões
-    "reach",               # Alcance (pessoas únicas)
-    "clicks",              # Cliques totais
-    "unique_clicks",       # Cliques únicos
-    "ctr",                 # CTR (%)
-    "cpc",                 # Custo por clique
-    "cpm",                 # CPM
-    "cpp",                 # Custo por mil pessoas alcançadas
-    "frequency",           # Frequência
-    "actions",             # Conversões (compras, checkouts, etc.)
-    "action_values",       # Valor das conversões (receita)
-    "cost_per_action_type", # CPA por tipo de ação
-    "video_p25_watched_actions",  # Video View 25%
-    "video_p75_watched_actions",  # Video View 75%
-    "website_ctr",         # CTR para o site
-    "outbound_clicks",     # Cliques no link (saída)
+    "spend",              
+    "impressions",         
+    "reach",               
+    "clicks",              
+    "unique_clicks",       
+    "ctr",                 
+    "cpc",                 
+    "cpm",                 
+    "cpp",                 
+    "frequency",           
+    "actions",             
+    "action_values",       
+    "cost_per_action_type", 
+    "video_p25_watched_actions",  
+    "video_p75_watched_actions",  
+    "website_ctr",         
+    "outbound_clicks",    
 ]
 
-# Parâmetros de segmentação por dia
+
 INSIGHT_PARAMS = {
-    "level": "ad",                      # Granularidade máxima
-    "time_increment": 1,               # 1 = por dia
-    "limit": 500,                      # Registros por página
+    "level": "ad",                      
+    "time_increment": 1,               
+    "limit": 500,                      
 }
 
 
-# ==============================================================================
-# FUNÇÃO DE EXTRAÇÃO COM PAGINAÇÃO E RETRY
-# ==============================================================================
 
 def fetch_insights(
     account: AdAccount,
@@ -177,7 +164,7 @@ def fetch_insights(
         try:
             cursor = account.get_insights(fields=INSIGHT_FIELDS, params=params)
 
-            # Paginação automática
+
             page_num = 0
             while True:
                 page_num += 1
@@ -193,7 +180,7 @@ def fetch_insights(
 
         except FacebookRequestError as e:
             attempt += 1
-            # Rate limit (código 17 ou 32)
+
             if e.api_error_code() in (17, 32, 613):
                 wait_time = 60 * attempt
                 log.warning(
@@ -209,9 +196,6 @@ def fetch_insights(
     raise RuntimeError(f"Extração falhou após {max_retries} tentativas.")
 
 
-# ==============================================================================
-# TRANSFORMAÇÃO E LIMPEZA DOS DADOS
-# ==============================================================================
 
 def _extract_action_value(actions: list, action_type: str) -> float:
     """Extrai o valor de uma ação específica da lista de actions da API."""
@@ -243,7 +227,7 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
         actions       = r.get("actions", [])
         action_values = r.get("action_values", [])
 
-        # Conversões padrão de e-commerce (ajuste os action_types conforme seu pixel)
+
         purchases          = _extract_action_value(actions, "purchase")
         purchase_revenue   = _extract_action_value(action_values, "purchase")
         add_to_cart        = _extract_action_value(actions, "add_to_cart")
@@ -253,7 +237,7 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
         landing_page_views = _extract_action_value(actions, "landing_page_view")
         messages_started   = _extract_action_value(actions, "onsite_conversion.messaging_conversation_started_7d")
 
-        # Video views
+
         video_25pct = _extract_action_value(r.get("video_p25_watched_actions", []), "video_view")
         video_75pct = _extract_action_value(r.get("video_p75_watched_actions", []), "video_view")
 
@@ -262,7 +246,7 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
         clicks      = int(r.get("clicks", 0) or 0)
         reach       = int(r.get("reach", 0) or 0)
 
-        # ── Métricas derivadas ──────────────────────────────────────────────
+
         roas                 = purchase_revenue / spend if spend > 0 else 0.0
         cpa                  = spend / purchases if purchases > 0 else 0.0
         ctr                  = float(r.get("ctr", 0) or 0)
@@ -272,7 +256,7 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
         cost_per_checkout    = spend / initiate_checkout if initiate_checkout > 0 else 0.0
         cost_per_message     = spend / messages_started if messages_started > 0 else 0.0
 
-        # Taxas do funil
+
         connect_rate         = (landing_page_views / clicks * 100) if clicks > 0 else 0.0
         checkout_rate        = (initiate_checkout / landing_page_views * 100) if landing_page_views > 0 else 0.0
         purchase_rate        = (purchases / initiate_checkout * 100) if initiate_checkout > 0 else 0.0
@@ -280,7 +264,7 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
         video_view_75_rate   = (video_75pct / impressions * 100) if impressions > 0 else 0.0
 
         rows.append({
-            # ── Dimensões ──
+
             "date":              r.get("date_start"),
             "campaign_id":       r.get("campaign_id"),
             "campaign_name":     r.get("campaign_name"),
@@ -289,14 +273,14 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
             "ad_id":             r.get("ad_id"),
             "ad_name":           r.get("ad_name"),
 
-            # ── Volume ──
+
             "impressions":       impressions,
             "reach":             reach,
             "clicks":            clicks,
             "link_clicks":       int(link_clicks),
             "landing_page_views": int(landing_page_views),
 
-            # ── Conversões ──
+
             "view_content":      int(view_content),
             "add_to_cart":       int(add_to_cart),
             "initiate_checkout": int(initiate_checkout),
@@ -305,11 +289,11 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
             "video_25pct":       int(video_25pct),
             "video_75pct":       int(video_75pct),
 
-            # ── Financeiro ──
+
             "spend":             round(spend, 2),
             "purchase_revenue":  round(purchase_revenue, 2),
 
-            # ── KPIs derivados ──
+
             "roas":              round(roas, 4),
             "cpa":               round(cpa, 2),
             "ctr":               round(ctr, 4),
@@ -319,20 +303,20 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
             "cost_per_checkout": round(cost_per_checkout, 2),
             "cost_per_message":  round(cost_per_message, 2),
 
-            # ── Taxas do funil (%) ──
+
             "connect_rate":      round(connect_rate, 2),
             "checkout_rate":     round(checkout_rate, 2),
             "purchase_rate":     round(purchase_rate, 2),
             "video_view_25_rate": round(video_view_25_rate, 2),
             "video_view_75_rate": round(video_view_75_rate, 2),
 
-            # ── Controle de carga ──
+
             "extracted_at":      datetime.utcnow().isoformat(),
         })
 
     df = pd.DataFrame(rows)
 
-    # Tipagem correta
+
     df["date"] = pd.to_datetime(df["date"])
     int_cols = [
         "impressions", "reach", "clicks", "link_clicks", "landing_page_views",
@@ -341,16 +325,12 @@ def transform(raw_rows: list[dict]) -> pd.DataFrame:
     ]
     df[int_cols] = df[int_cols].fillna(0).astype(int)
 
-    # Remove duplicatas (segurança)
+
     df = df.drop_duplicates(subset=["date", "ad_id"])
 
     log.info("Transformação concluída: %d linhas, %d colunas", len(df), len(df.columns))
     return df
 
-
-# ==============================================================================
-# CARGA — BIGQUERY
-# ==============================================================================
 
 BQ_SCHEMA = [
     bigquery.SchemaField("date",              "DATE")         if BIGQUERY_AVAILABLE else None,
@@ -413,7 +393,7 @@ def load_to_bigquery(df: pd.DataFrame, table_id: str = "ad_insights") -> None:
     client = bigquery.Client(project=GCP_PROJECT_ID)
     full_table = f"{GCP_PROJECT_ID}.{BQ_DATASET}.{table_id}"
 
-    # Garante que o dataset existe
+
     try:
         client.get_dataset(BQ_DATASET)
     except NotFound:
@@ -430,7 +410,7 @@ def load_to_bigquery(df: pd.DataFrame, table_id: str = "ad_insights") -> None:
         autodetect=False,
     )
 
-    # Remove linhas que já existem para a mesma data (deduplicação)
+
     dates_in_df = df["date"].dt.strftime("%Y-%m-%d").unique().tolist()
     dates_str   = ", ".join(f"'{d}'" for d in dates_in_df)
 
@@ -442,7 +422,6 @@ def load_to_bigquery(df: pd.DataFrame, table_id: str = "ad_insights") -> None:
     except Exception:
         log.info("Tabela ainda não existe ou sem dados anteriores — prosseguindo.")
 
-    # Converte date para string antes de carregar (compatibilidade Parquet → BQ DATE)
     df_bq = df.copy()
     df_bq["date"] = df_bq["date"].dt.strftime("%Y-%m-%d")
 
@@ -452,9 +431,7 @@ def load_to_bigquery(df: pd.DataFrame, table_id: str = "ad_insights") -> None:
     log.info("Carga concluída: %d linhas → %s", len(df), full_table)
 
 
-# ==============================================================================
-# CARGA — CSV (FALLBACK)
-# ==============================================================================
+
 
 def export_to_csv(df: pd.DataFrame, output_dir: str = "output") -> str:
     """
@@ -476,9 +453,6 @@ def export_to_csv(df: pd.DataFrame, output_dir: str = "output") -> str:
     return path
 
 
-# ==============================================================================
-# PONTO DE ENTRADA PRINCIPAL
-# ==============================================================================
 
 def run(
     date_start: Optional[str] = None,
@@ -511,18 +485,17 @@ def run(
     log.info("Destino: %s", destination.upper())
     log.info("=" * 60)
 
-    # 1. Extração
+
     account  = init_api()
     raw_data = fetch_insights(account, date_start, date_stop)
 
-    # 2. Transformação
+
     df = transform(raw_data)
 
     if df.empty:
         log.warning("Nenhum dado disponível para o período informado.")
         return df
 
-    # 3. Carga
     if destination == "bigquery":
         if BIGQUERY_AVAILABLE and GCP_PROJECT_ID:
             load_to_bigquery(df)
@@ -535,10 +508,6 @@ def run(
     log.info("PIPELINE FINALIZADO COM SUCESSO")
     return df
 
-
-# ==============================================================================
-# EXECUÇÃO DIRETA
-# ==============================================================================
 
 if __name__ == "__main__":
     import argparse

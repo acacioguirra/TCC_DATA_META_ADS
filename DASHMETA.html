@@ -765,10 +765,10 @@
         const cpm         = parseFloat(s.cpm || 0);
         const ctr         = parseFloat(s.ctr || 0);
 
-        // KPIs
+   
         renderKPIs({ spend, purchases, revenue, roas, clicks });
 
-        // Funil
+  
         document.getElementById('funnel-clicks').textContent      = fmtInt(clicks);
         document.getElementById('funnel-impressions').textContent  = fmtInt(impressions);
         document.getElementById('funnel-spend').textContent        = 'R$' + fmt(spend);
@@ -785,7 +785,7 @@
         document.getElementById('chip-cpm').textContent           = 'R$' + fmt(cpm);
         document.getElementById('chip-roas').textContent          = roas.toFixed(2);
 
-        // Charts
+
         renderLineChart(globalDailyData);
         renderDonut(roas, spend, revenue);
         renderTable(globalDailyData);
@@ -876,9 +876,7 @@
       });
     }
 
-    // ══════════════════════════════════════════════
-    //  LINE CHART (diário)
-    // ══════════════════════════════════════════════
+
     function renderLineChart(daily) {
       const ctx = document.getElementById('lineChart');
       if (!ctx) return;
@@ -913,9 +911,7 @@
       });
     }
 
-    // ══════════════════════════════════════════════
-    //  DONUT
-    // ══════════════════════════════════════════════
+
     function renderDonut(roas, spend, revenue) {
       const ctx = document.getElementById('donutChart');
       if (!ctx) return;
@@ -948,9 +944,7 @@
         </div>`).join('');
     }
 
-    // ══════════════════════════════════════════════
-    //  TABLE (diária)
-    // ══════════════════════════════════════════════
+
     function renderTable(daily) {
       const tbody = document.getElementById('campaign-tbody');
       if (!daily.length) {
@@ -988,9 +982,7 @@
       rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
     }
 
-    // ══════════════════════════════════════════════
-    //  DETALHE (SPA)
-    // ══════════════════════════════════════════════
+
     function abrirDetalhe(index) {
       if (!globalDailyData.length) return;
       document.getElementById('visao-principal').style.display = 'none';
@@ -1045,9 +1037,7 @@
       document.getElementById('visao-principal').style.display = 'block';
     }
 
-    // ══════════════════════════════════════════════
-    //  INIT
-    // ══════════════════════════════════════════════
+
     initDates();
     loadData();
   </script>
